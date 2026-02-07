@@ -10,7 +10,7 @@ st.title("🌾 Mycotoxin Contamination Prediction")
 # ===============================
 # LOAD MODEL
 # ===============================
-MODEL_PATH = "model_pipeline.pkl"
+MODEL_PATH = "model_pipeline.joblib"
 
 if not os.path.exists(MODEL_PATH):
     st.error("❌ model_pipeline.pkl not found")
