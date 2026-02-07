@@ -3,40 +3,59 @@ import pandas as pd
 import joblib
 import os
 
-st.set_page_config(page_title="Mycotoxin Detection AI", layout="centered")
+# ===============================
+# PAGE CONFIG
+# ===============================
+st.set_page_config(
+    page_title="Mycotoxin Detection AI",
+    layout="centered"
+)
 
 st.title("🌾 Mycotoxin Contamination Prediction")
+st.write("Predict the risk of mycotoxin contamination based on environmental and storage conditions.")
 
 # ===============================
-# LOAD MODEL
+# MODEL PATH
 # ===============================
 MODEL_PATH = "model_pipeline.joblib"
 
+# ===============================
+# LOAD MODEL SAFELY
+# ===============================
 @st.cache_resource
-def load_model():
-    return joblib.load(MODEL_PATH)
+def load_model(path):
+    return joblib.load(path)
 
-if not os.path.exists(MODEL_PATH):
-    st.error("❌ model_pipeline.joblib not found")
+if not os.path.isfile(MODEL_PATH):
+    st.error("❌ Model file `model_pipeline.joblib` not found in repository root.")
     st.stop()
 
-model = load_model()
-st.success("✅ Model loaded successfully")
+try:
+    model = load_model(MODEL_PATH)
+    st.success("✅ Model loaded successfully")
+except Exception as e:
+    st.error(f"❌ Failed to load model: {e}")
+    st.stop()
 
 # ===============================
-# USER INPUT
+# USER INPUTS
 # ===============================
-temperature = st.number_input("Temperature (°C)", 0.0, 60.0, 25.0)
-humidity = st.number_input("Humidity (%)", 0.0, 100.0, 60.0)
-rainfall = st.number_input("Rainfall (mm)", 0.0, 500.0, 100.0)
-storage_days = st.number_input("Storage Days", 0, 365, 30)
-moisture_content = st.number_input("Moisture Content (%)", 0.0, 100.0, 12.0)
-crop_type = st.selectbox("Crop Type", ["maize", "rice", "wheat", "groundnut"])
+st.subheader("📥 Enter Input Parameters")
+
+temperature = st.number_input("Temperature (°C)", min_value=0.0, max_value=60.0, value=25.0)
+humidity = st.number_input("Humidity (%)", min_value=0.0, max_value=100.0, value=60.0)
+rainfall = st.number_input("Rainfall (mm)", min_value=0.0, max_value=500.0, value=100.0)
+storage_days = st.number_input("Storage Days", min_value=0, max_value=365, value=30)
+moisture_content = st.number_input("Moisture Content (%)", min_value=0.0, max_value=100.0, value=12.0)
+crop_type = st.selectbox(
+    "Crop Type",
+    ["maize", "rice", "wheat", "groundnut"]
+)
 
 # ===============================
 # PREDICTION
 # ===============================
-if st.button("Predict"):
+if st.button("🔍 Predict"):
     input_df = pd.DataFrame([{
         "temperature": temperature,
         "humidity": humidity,
@@ -46,10 +65,24 @@ if st.button("Predict"):
         "crop_type": crop_type
     }])
 
-    prediction = model.predict(input_df)[0]
-    probability = model.predict_proba(input_df)[0][1]
+    try:
+        prediction = model.predict(input_df)[0]
 
-    if prediction == 1:
-        st.error(f"⚠️ Contaminated (Risk: {probability:.2f})")
-    else:
-        st.success(f"✅ Safe (Risk: {probability:.2f})")
+        if hasattr(model, "predict_proba"):
+            probability = model.predict_proba(input_df)[0][1]
+        else:
+            probability = None
+
+        if prediction == 1:
+            if probability is not None:
+                st.error(f"⚠️ Contaminated — Risk Score: {probability:.2f}")
+            else:
+                st.error("⚠️ Contaminated")
+        else:
+            if probability is not None:
+                st.success(f"✅ Safe — Risk Score: {probability:.2f}")
+            else:
+                st.success("✅ Safe")
+
+    except Exception as e:
+        st.error(f"❌ Prediction failed: {e}")
