@@ -1,3 +1,29 @@
+import subprocess
+import sys
+
+# This forces the installation of missing packages every time the app starts
+def install(package):
+    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
+try:
+    import joblib
+    import sklearn
+except ImportError:
+    install('joblib')
+    install('scikit-learn')
+    install('pandas')
+    import joblib
+    import sklearn
+
+import streamlit as st
+import pandas as pd
+import os
+
+# ===============================
+# THE REST OF YOUR CODE STARTS HERE
+# ===============================
+st.set_page_config(page_title="Mycotoxin Detection AI", layout="centered")
+# ... (rest of the code I gave you previously)
 import streamlit as st
 import pandas as pd
 import joblib
