@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import pickle
+import joblib
 import os
 
 st.set_page_config(page_title="Mycotoxin Detection AI", layout="centered")
@@ -12,13 +12,15 @@ st.title("🌾 Mycotoxin Contamination Prediction")
 # ===============================
 MODEL_PATH = "model_pipeline.joblib"
 
+@st.cache_resource
+def load_model():
+    return joblib.load(MODEL_PATH)
+
 if not os.path.exists(MODEL_PATH):
-    st.error("❌ model_pipeline.pkl not found")
+    st.error("❌ model_pipeline.joblib not found")
     st.stop()
 
-with open(MODEL_PATH, "rb") as f:
-    model = pickle.load(f)
-
+model = load_model()
 st.success("✅ Model loaded successfully")
 
 # ===============================
