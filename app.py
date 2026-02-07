@@ -1,41 +1,49 @@
-
 import streamlit as st
-import numpy as np
+import pandas as pd
 import pickle
 
-# Load model
-model = pickle.load(open("model.pkl", "rb"))
-scaler = pickle.load(open("scaler.pkl", "rb"))
+# ===============================
+# LOAD MODEL
+# ===============================
+model = pickle.load(open("model_pipeline.pkl", "rb"))
 
-st.set_page_config(page_title="Mycotoxin Detection", layout="centered")
+st.set_page_config(page_title="Mycotoxin Detection AI", layout="centered")
 
-st.title("🌾 AI-Based Mycotoxin Risk Detection")
-st.write("Enter environmental and storage conditions")
+st.title("🧪 Mycotoxin Contamination Detection")
+st.write("Enter environmental and storage parameters to assess contamination risk.")
 
-# Inputs
-temperature = st.slider("Temperature (°C)", 10.0, 45.0, 28.0)
-humidity = st.slider("Humidity (%)", 30.0, 100.0, 75.0)
-rainfall = st.slider("Rainfall (mm)", 0.0, 400.0, 150.0)
-storage_days = st.slider("Storage Days", 1, 365, 120)
-moisture = st.slider("Moisture Content (%)", 8.0, 25.0, 15.0)
+# ===============================
+# USER INPUTS
+# ===============================
+temperature = st.number_input("Temperature (°C)", 0.0, 60.0, 25.0)
+humidity = st.number_input("Humidity (%)", 0.0, 100.0, 65.0)
+rainfall = st.number_input("Rainfall (mm)", 0.0, 500.0, 100.0)
+storage_days = st.number_input("Storage Duration (days)", 0, 365, 30)
+moisture_content = st.number_input("Moisture Content (%)", 0.0, 30.0, 12.5)
+crop_type = st.selectbox(
+    "Crop Type",
+    ["maize", "wheat", "rice", "groundnut"]
+)
 
-crop = st.selectbox("Crop Type", ["Maize", "Rice", "Sorghum", "Wheat"])
+# ===============================
+# PREDICTION
+# ===============================
+if st.button("Predict Contamination Risk"):
+    input_data = pd.DataFrame([{
+        "temperature": temperature,
+        "humidity": humidity,
+        "rainfall": rainfall,
+        "storage_days": storage_days,
+        "moisture_content": moisture_content,
+        "crop_type": crop_type
+    }])
 
-crop_rice = 1 if crop == "Rice" else 0
-crop_sorghum = 1 if crop == "Sorghum" else 0
-crop_wheat = 1 if crop == "Wheat" else 0
+    prediction = model.predict(input_data)[0]
+    probability = model.predict_proba(input_data)[0][1]
 
-if st.button("🔍 Predict Risk"):
-    user_input = np.array([[temperature, humidity, rainfall,
-                            storage_days, moisture,
-                            crop_rice, crop_sorghum, crop_wheat]])
+    st.subheader("Result")
 
-    user_input_scaled = scaler.transform(user_input)
-    risk_prob = model.predict_proba(user_input_scaled)[0][1] * 100
-
-    if risk_prob > 60:
-        st.error(f"🚨 HIGH RISK ({risk_prob:.2f}%)")
-    elif risk_prob > 30:
-        st.warning(f"⚠️ MEDIUM RISK ({risk_prob:.2f}%)")
+    if prediction == 1:
+        st.error(f"⚠️ Contaminated\n\nRisk Probability: {probability*100:.2f}%")
     else:
-        st.success(f"✅ LOW RISK ({risk_prob:.2f}%)")
+        st.success(f"✅ Safe\n\nRisk Probability: {probability*100:.2f}%")
