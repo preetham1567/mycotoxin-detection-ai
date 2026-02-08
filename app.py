@@ -13,37 +13,27 @@ st.set_page_config(
 )
 
 st.title("🌾 Mycotoxin Contamination Prediction")
-st.write(
-    "Predict the risk of mycotoxin contamination based on environmental "
-    "and storage conditions."
-)
+st.write("Predict mycotoxin risk based on environmental and storage conditions.")
 
 # ===============================
-# MODEL PATH & LOADING
+# MODEL LOADING
 # ===============================
-MODEL_PATH = "model_pipeline.joblib"  # must exist in repo root
+MODEL_PATH = "model_pipeline.joblib"
 
 @st.cache_resource
 def load_model(path):
     return joblib.load(path)
 
-if not os.path.isfile(MODEL_PATH):
-    st.error(f"❌ Model file `{MODEL_PATH}` not found.")
-    st.info("Upload the model file to the GitHub repo root.")
+if not os.path.exists(MODEL_PATH):
+    st.error("❌ model_pipeline.joblib not found in repository root")
     st.stop()
 
-try:
-    model = load_model(MODEL_PATH)
-    st.sidebar.success("✅ Model Loaded")
-except Exception as e:
-    st.error(f"❌ Failed to load model: {e}")
-    st.stop()
+model = load_model(MODEL_PATH)
+st.sidebar.success("✅ Model loaded")
 
 # ===============================
-# USER INPUTS
+# USER INPUT
 # ===============================
-st.subheader("📥 Enter Input Parameters")
-
 col1, col2 = st.columns(2)
 
 with col1:
@@ -54,15 +44,12 @@ with col1:
 with col2:
     humidity = st.number_input("Humidity (%)", 0.0, 100.0, 60.0)
     storage_days = st.number_input("Storage Days", 0, 365, 30)
-    crop_type = st.selectbox(
-        "Crop Type",
-        ["maize", "rice", "wheat", "groundnut"]
-    )
+    crop_type = st.selectbox("Crop Type", ["maize", "rice", "wheat", "groundnut"])
 
 # ===============================
 # PREDICTION
 # ===============================
-if st.button("🔍 Run Prediction Analysis", use_container_width=True):
+if st.button("🔍 Predict"):
     input_df = pd.DataFrame([{
         "temperature": temperature,
         "humidity": humidity,
@@ -72,36 +59,10 @@ if st.button("🔍 Run Prediction Analysis", use_container_width=True):
         "crop_type": crop_type
     }])
 
-    try:
-        prediction = model.predict(input_df)[0]
+    pred = model.predict(input_df)[0]
+    prob = model.predict_proba(input_df)[0][1]
 
-        probability = None
-        if hasattr(model, "predict_proba"):
-            probability = model.predict_proba(input_df)[0][1]
-
-        st.markdown("---")
-        st.subheader("🧪 Result")
-
-        if prediction == 1:
-            if probability is not None:
-                st.error(f"🚨 HIGH RISK ({probability * 100:.2f}%)")
-            else:
-                st.error("🚨 HIGH RISK")
-            st.write(
-                "⚠️ Recommendation: Improve ventilation and reduce "
-                "moisture immediately."
-            )
-        else:
-            if probability is not None:
-                st.success(f"✅ SAFE ({probability * 100:.2f}%)")
-            else:
-                st.success("✅ SAFE")
-            st.write(
-                "✅ Current conditions are within safe thresholds."
-            )
-
-    except Exception as e:
-        st.error(f"❌ Prediction failed: {e}")
-        st.info(
-            "Ensure feature names match exactly those used during training."
-        )
+    if pred == 1:
+        st.error(f"🚨 Contaminated (Risk: {prob*100:.2f}%)")
+    else:
+        st.success(f"✅ Safe (Risk: {prob*100:.2f}%)")
